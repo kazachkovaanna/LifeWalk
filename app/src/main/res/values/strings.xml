@@ -1,0 +1,18 @@
+<resources>
+    <string name="app_name">Walk</string>
+
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+
+    <string name="action_settings">Settings</string>
+
+    <string name="walkstring">Прогулка по Санкт-Петербургу</string>
+
+    <string name="nearby">Что рядом?</string>
+    <string name="whatToSee">На что посмотреть?</string>
+    <string name="preferences">Предпочтения</string>
+    <string name="objects">На что смотреть?</string>
+    <string name="categories">С чем связаны места?</string>
+    <string name="distance">Расстояние до места</string>
+    <string name="notifications">Уведомления</string>
+</resources>

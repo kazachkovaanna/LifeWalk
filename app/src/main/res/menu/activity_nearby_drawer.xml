@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <group android:id="@+id/nearbyGroup">
+        <item
+            android:id="@+id/nearby"
+            android:title="@string/nearby" />
+        <item
+            android:id="@+id/what"
+            android:title="@string/whatToSee" />
+    </group>
+
+    <group android:id="@+id/prefsGroup">
+        <item android:id="@+id/objects" android:title="@string/objects"/>
+        <item android:id="@+id/categories" android:title="@string/categories"/>
+    </group>
+
+    <group android:id="@+id/settings">
+        <item android:id="@+id/distance" android:title="@string/distance"/>
+        <item android:id="@+id/notifications" android:title="@string/notifications"/>
+    </group>
+
+</menu>
