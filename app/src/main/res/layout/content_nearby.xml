@@ -13,8 +13,24 @@
     tools:showIn="@layout/app_bar_nearby"
     tools:context="spblife.walk.NearbyActivity">
 
-    <TextView
-        android:text="Hello World!"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content" />
+    <ScrollView
+        android:id="@+id/mapScrollView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" >
+        <LinearLayout
+            android:id="@+id/mapLinearView"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:orientation="vertical" >
+
+            <ru.yandex.yandexmapkit.MapView
+                android:id="@+id/map"
+                android:layout_width="fill_parent"
+                android:layout_height="300dip"
+                android:apiKey="IN1RJIohJJ9wUolNvq4b5OtkfPbikhBfvo8K8z2N5xlB2GPAmiA1UQRJu~56gSpQPjVxsr2YtFcA4GLaT3ISP9bdwtXocvvqziZQ391QDFQ="
+                android:tag="static"
+                />
+
+        </LinearLayout>
+    </ScrollView>
 </RelativeLayout>
