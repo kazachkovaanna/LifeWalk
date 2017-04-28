@@ -1,9 +1,15 @@
 package spblife.walk;
 
+import android.Manifest;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.content.res.Resources;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.os.Bundle;
 import android.support.design.widget.NavigationView;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
@@ -11,6 +17,8 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.MenuItem;
 import android.widget.TextView;
+
+import java.util.List;
 
 import ru.yandex.yandexmapkit.MapController;
 import ru.yandex.yandexmapkit.MapView;
@@ -20,6 +28,8 @@ import ru.yandex.yandexmapkit.overlay.OverlayItem;
 import ru.yandex.yandexmapkit.overlay.balloon.BalloonItem;
 import ru.yandex.yandexmapkit.utils.GeoPoint;
 import spblife.walk.nearby.BalloonListener;
+import spblife.walk.place.Place;
+import spblife.walk.place.PlaceFabric;
 import spblife.walk.settings.Settings;
 
 public class NearbyActivity extends AppCompatActivity
@@ -29,6 +39,13 @@ public class NearbyActivity extends AppCompatActivity
     MapController mapController;
     OverlayManager overlayManager;
     BalloonListener balloonListener;
+    MapView mapView;
+    private static PlaceFabric placeFabric = new PlaceFabric();
+    boolean nearMeMode;
+    private static final int PERMISSIONS_CODE = 109;
+
+    private GeoPoint nearPoint;
+    LocationManager locationManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,13 +67,16 @@ public class NearbyActivity extends AppCompatActivity
         settings = new Settings(getSharedPreferences(".settings", Context.MODE_PRIVATE));
 
         //Работа с картой
-        MapView mapView = (MapView) findViewById(R.id.map);
+        mapView = (MapView) findViewById(R.id.map);
         mapController = mapView.getMapController();
         overlayManager = mapController.getOverlayManager();
-        overlayManager.getMyLocation().setEnabled(true);
         balloonListener = new BalloonListener();
+        locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
+
+        nearMeMode = true;
+        nearPoint = null;
         //ну и поработать с ней
-        go();
+        initMap();
     }
 
     @Override
@@ -98,17 +118,85 @@ public class NearbyActivity extends AppCompatActivity
         return true;
     }
 
+    @Override
+    protected void onResume(){
+        super.onResume();
+
+    }
+
+    private LocationListener locationListener = new LocationListener() {
+
+        @Override
+        public void onLocationChanged(Location location) {
+            nearPoint = new GeoPoint(location.getLatitude(), location.getLongitude());
+            go();
+        }
+
+        @Override
+        public void onProviderDisabled(String provider) {
+            //checkEnabled();
+        }
+
+        @Override
+        public void onProviderEnabled(String provider) {
+            //checkEnabled();
+            //showLocation(locationManager.getLastKnownLocation(provider));
+        }
+
+        @Override
+        public void onStatusChanged(String provider, int status, Bundle extras) {
+
+        }
+    };
+
+    private void initMap(){
+        //Создать  слой для работы с объектами
+        Resources res = getResources();
+        Overlay overlay = new Overlay(mapController);
+        if(nearMeMode){
+            checkPermission();
+            //mapView.showBuiltInScreenButtons(true);
+            overlayManager.getMyLocation().setEnabled(true);
+
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,
+                    0, 10, locationListener);
+            locationManager.requestLocationUpdates(
+                    LocationManager.NETWORK_PROVIDER, 0, 10,
+                    locationListener);
+            Location lastLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+            if(lastLocation != null) nearPoint = new GeoPoint(lastLocation.getLatitude(), lastLocation.getLongitude());
+            overlayManager.getMyLocation().findMe();
+        }
+        else{
+            overlayManager.getMyLocation().setEnabled(false);
+            nearPoint = new GeoPoint(59.923576, 30.342745);
+        }
+    }
+
+
     private  void go(){
         //Создать  слой для работы с объектами
         Resources res = getResources();
         Overlay overlay = new Overlay(mapController);
-        OverlayItem overlayItem = new OverlayItem(new GeoPoint(59.987313, 30.370817),res.getDrawable(R.drawable.place, getTheme()));
-        BalloonItem balloonItem = new BalloonItem(this,overlayItem.getGeoPoint());
-        balloonItem.setOnBalloonListener(balloonListener);
-        overlay.addOverlayItem(overlayItem);
-        overlayManager.addOverlay(overlay);
-        //Перемещение карты из Москвы в Положение точки на карте
-        mapController.setPositionAnimationTo(overlayItem.getGeoPoint());
+
+
+
+        List<Place> places = placeFabric.getNearPlaces(nearPoint.getLat(), nearPoint.getLon(), settings.getDistance());
+
+        for(Place p : places){
+            OverlayItem overlayItem = new OverlayItem(new GeoPoint(p.getLat(), p.getLon()),res.getDrawable(R.drawable.place, getTheme()));
+            BalloonItem balloonItem = new BalloonItem(this,overlayItem.getGeoPoint());
+            balloonItem.setOnBalloonListener(balloonListener);
+            overlay.addOverlayItem(overlayItem);
+            overlayManager.addOverlay(overlay);
+        }
+
+
+        mapController.setPositionAnimationTo(nearPoint);
+        //Отобразить места в списке
+        for(Place p: places){
+
+        }
         //Масштабирование
         /*double maxLat, minLat, maxLon, minLon;
         maxLat = maxLon = Double.MIN_VALUE;
@@ -123,5 +211,19 @@ public class NearbyActivity extends AppCompatActivity
         minLon = Math.min(lon, minLon);
 
         mapController.setZoomToSpan(-10, -10);*/
+    }
+
+    private void checkPermission() {
+        int permACL = ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION);
+        int permAFL = ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION);
+
+        if (permACL != PackageManager.PERMISSION_GRANTED ||
+                permAFL != PackageManager.PERMISSION_GRANTED) {
+
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.ACCESS_COARSE_LOCATION,
+                            Manifest.permission.ACCESS_FINE_LOCATION}, PERMISSIONS_CODE);
+        }
+
     }
 }

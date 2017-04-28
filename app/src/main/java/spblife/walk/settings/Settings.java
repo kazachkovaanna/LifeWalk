@@ -7,7 +7,7 @@ import android.content.SharedPreferences;
  * Хранит настройки приложения.
  */
 public class Settings {
-    public static Integer DISTANCE = 100;
+    public static Integer DISTANCE = 1000;
     public static Boolean NOTIFICATION = true;
 
     SharedPreferences preferences;

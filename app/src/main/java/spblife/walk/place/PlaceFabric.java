@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+import spblife.walk.settings.Settings;
+
 /**
  * Created by kazac on 28.04.2017.
  */
@@ -87,5 +89,35 @@ public class PlaceFabric {
 
     public List<Place> getPlaces() {
         return places;
+    }
+
+    private double getDistance(double latf, double lonf, double latto, double lonto){
+        latf = Math.toRadians(latf);
+        latto = Math.toRadians(latto);
+        lonf = Math.toRadians(lonf);
+        lonto = Math.toRadians(lonto);
+        double dLon = (lonto-lonf);
+        //double dLat = Math.abs(latf-latto);
+        double delta;
+        delta = 2.0 * Math.asin(
+                Math.sqrt(
+                        Math.pow(
+                                Math.sin((latto-latf)/2.0), 2
+                        ) +
+                        Math.cos(latf) * Math.cos(latto) *Math.pow(
+                                Math.sin(dLon/2), 2
+                        )
+                )
+        );
+        return delta * 6372795;
+    }
+
+    public List<Place> getNearPlaces(double lat, double lon, int distance){
+        List<Place> near = new ArrayList<>();
+        for(Place p : places){
+            if(getDistance(lat, lon, p.getLat(), p.getLon()) <= distance)
+                near.add(p);
+        }
+        return  near;
     }
 }
