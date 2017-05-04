@@ -2,6 +2,7 @@ package spblife.walk;
 
 import android.Manifest;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.location.Location;
@@ -70,7 +71,7 @@ public class NearbyActivity extends AppCompatActivity
         mapLayout = (LinearLayout) findViewById(R.id.mapLinearView);
 
         //Настройки
-        settings = new Settings(getSharedPreferences(".settings", Context.MODE_PRIVATE));
+        settings = Settings.getSettings(getSharedPreferences("spblife.walk_preferences", Context.MODE_PRIVATE));
 
         //Работа с картой
         mapView = (MapView) findViewById(R.id.map);
@@ -83,6 +84,8 @@ public class NearbyActivity extends AppCompatActivity
         nearPoint = null;
         //ну и поработать с ней
         initMap();
+
+
     }
 
     @Override
@@ -111,12 +114,18 @@ public class NearbyActivity extends AppCompatActivity
     @Override
     public boolean onNavigationItemSelected(MenuItem item) {
         // Handle navigation view item clicks here.
+        Intent intent;
         int id = item.getItemId();
 
         if (id == R.id.nearby) {
-            // Handle the camera action
+
         } else if (id == R.id.what) {
 
+        }
+        else if (id== R.id.distance){
+            intent=new Intent(this, SettingsActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            this.startActivity(intent);
         }
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
@@ -127,7 +136,7 @@ public class NearbyActivity extends AppCompatActivity
     @Override
     protected void onResume(){
         super.onResume();
-
+        initMap();
     }
 
     private LocationListener locationListener = new LocationListener() {
@@ -159,6 +168,10 @@ public class NearbyActivity extends AppCompatActivity
         //Создать  слой для работы с объектами
         Resources res = getResources();
         Overlay overlay = new Overlay(mapController);
+        List<Overlay> overlays = overlayManager.getOverlays();
+        for(Overlay o : overlays){
+            o.clearOverlayItems();
+        }
         if(nearMeMode){
             checkPermission();
             //mapView.showBuiltInScreenButtons(true);
@@ -187,11 +200,12 @@ public class NearbyActivity extends AppCompatActivity
         Overlay overlay = new Overlay(mapController);
 
 
+        int dist =  Settings.getSettings().getDistance();
 
-        List<Place> places = placeFabric.getNearPlaces(nearPoint.getLat(), nearPoint.getLon(), settings.getDistance());
+        List<Place> places = placeFabric.getNearPlaces(nearPoint.getLat(), nearPoint.getLon(),dist);
 
         for(Place p : places){
-            OverlayItem overlayItem = new OverlayItem(new GeoPoint(p.getLat(), p.getLon()),res.getDrawable(R.drawable.place, getTheme()));
+            OverlayItem overlayItem = new OverlayItem(new GeoPoint(p.getLat(), p.getLon()),res.getDrawable(R.drawable.ic_place, getTheme()));
             BalloonItem balloonItem = new BalloonItem(this,overlayItem.getGeoPoint());
             balloonItem.setOnBalloonListener(balloonListener);
             overlay.addOverlayItem(overlayItem);
@@ -199,13 +213,14 @@ public class NearbyActivity extends AppCompatActivity
         }
 
         if(!nearMeMode){
-            OverlayItem overlayItem = new OverlayItem(nearPoint,res.getDrawable(R.drawable.near, getTheme()));
+            OverlayItem overlayItem = new OverlayItem(nearPoint,res.getDrawable(R.drawable.ic_where, getTheme()));
             BalloonItem balloonItem = new BalloonItem(this,overlayItem.getGeoPoint());
             balloonItem.setOnBalloonListener(balloonListener);
             overlay.addOverlayItem(overlayItem);
             overlayManager.addOverlay(overlay);
         }
 
+        mapController.setZoomCurrent(17);
         mapController.setPositionAnimationTo(nearPoint);
         //Отобразить места в списке
         for(Place p: places){
@@ -240,6 +255,7 @@ public class NearbyActivity extends AppCompatActivity
         }
         mapController.setZoomToSpan(maxLat - minLat, maxLon - minLon);
         mapController.setPositionAnimationTo(new GeoPoint((maxLat + minLat)/2, (maxLon + minLon)/2));*/
+
 
     }
 

@@ -7,6 +7,7 @@ import android.content.SharedPreferences;
  * Хранит настройки приложения.
  */
 public class Settings {
+    private static Settings settings =new Settings();
     public static Integer DISTANCE = 1000;
     public static Boolean NOTIFICATION = true;
 
@@ -14,10 +15,25 @@ public class Settings {
     protected Integer distance;
     protected Boolean notification;
 
+    public static Settings getSettings() {
+        return settings;
+    }
+
+    public static Settings getSettings(SharedPreferences preferences){
+        setSettings(preferences);
+        return settings;
+    }
+
+    public static void setSettings(SharedPreferences preferences){
+        settings.preferences = preferences;
+
+        settings.load();
+        settings.save();
+    }
     /**
      * Конструктор по-умолчанию.
      */
-    public Settings() {
+    private Settings() {
         distance = DISTANCE;
         notification = NOTIFICATION;
     }
@@ -26,7 +42,7 @@ public class Settings {
      * Конструктор инициализации из файла настроек.
      * @param preferences объект-фаил настроек.
      */
-    public Settings(SharedPreferences preferences) {
+    private Settings(SharedPreferences preferences) {
         this.preferences = preferences;
 
         load();

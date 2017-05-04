@@ -109,7 +109,8 @@ public class PlaceFabric {
                         )
                 )
         );
-        return delta * 6372795;
+        delta*=6372795;
+        return delta;
     }
 
     public List<Place> getNearPlaces(double lat, double lon, int distance){

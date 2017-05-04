@@ -1,0 +1,12 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <spblife.walk.settings.NumberEdirPreference
+        android:title="Максимальное расстояние"
+        android:inputType="numberDecimal"
+        android:maxLength="3"
+        android:key="distance"
+        android:selectAllOnFocus="true"
+        android:defaultValue="@string/def_distance"
+        />
+
+
+</PreferenceScreen>

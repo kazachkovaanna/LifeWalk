@@ -16,7 +16,7 @@
     </group>
 
     <group android:id="@+id/settings">
-        <item android:id="@+id/distance" android:title="@string/distance"/>
+        <item android:id="@+id/distance" android:title="Настройки"/>
         <item android:id="@+id/notifications" android:title="@string/notifications"/>
     </group>
 
