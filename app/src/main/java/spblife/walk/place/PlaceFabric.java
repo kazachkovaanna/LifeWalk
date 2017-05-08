@@ -1,9 +1,23 @@
 package spblife.walk.place;
 
+import android.os.AsyncTask;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+import spblife.walk.NearbyActivity;
 import spblife.walk.settings.Settings;
 
 /**
@@ -14,19 +28,41 @@ public class PlaceFabric {
     public List<String> allCategories;
     public List<Place>  places;
 
+    //URL по которому можно получиь json с местами
+    private static String urlString = "http://192.168.100.14/lifewalk/places.php";
+    //тэги json
+    private static final String TAG_SUCCESS = "success";
+    private static final String TAG_PLACES = "places";
+    private static final String TAG_LAT = "lat";
+    private static final String TAG_LON = "lon";
+    private static final String TAG_DIST = "dist";
+    private static final String TAG_OLIST = "objectList";
+    private static final String TAG_CLIST = "categoriesList";
+    private static final String TAG_SHORT = "shortDescription";
+    private static final String TAG_LONG = "longDescription";
+    private static final String TAG_NAME = "name";
+    private static final String TAG_ADDRESS = "address";
+    private double lat, lon;
+    private int dist;
+
+    //Массив, пришедший в json
+    JSONArray jplaces = null;
+
     public PlaceFabric(){
         //ПОКА ЧТО ТУТ ГЕНЕРИРУЮТСЯ МЕСТА
         //В БУДУЩЕМ - УСТАНОВКА СОЕДИНЕНИЯ С СЕРВЕРО МЕСТ!!!!
         //ТО ЖЕ КАСАЕТСЯ СПИСКОВ КАТЕГОРИЙ И ОБЪЕКТОВ
         allObjects = new ArrayList<>();
-        allObjects.add("Дом");
+        allCategories = new ArrayList<>();
+        places = new ArrayList<>();
+        /*allObjects.add("Дом");
         allObjects.add("Памятник");
         allObjects.add("Двор");
-        allCategories = new ArrayList<>();
+
         allCategories.add("Кирпич");
         allCategories.add("Церковь");
         allCategories.add("Сказка");
-        places = new ArrayList<>();
+
 
         //Одно место рядом со мной
         //Артилеррийская лаборатория
@@ -76,7 +112,7 @@ public class PlaceFabric {
         place.setCategoriesList(clist);
         place.setLat(59.924269);
         place.setLon(30.344786);
-        places.add(place);
+        places.add(place);*/
     }
 
     public List<String> getAllObjects() {
@@ -113,12 +149,107 @@ public class PlaceFabric {
         return delta;
     }
 
-    public List<Place> getNearPlaces(double lat, double lon, int distance){
-        List<Place> near = new ArrayList<>();
-        for(Place p : places){
-            if(getDistance(lat, lon, p.getLat(), p.getLon()) <= distance)
-                near.add(p);
+    public void getNearPlaces(double lat, double lon, int distance, NearbyActivity retActivity){
+        places.clear();
+        this.lat = Math.toRadians(lat);
+        this.lon = Math.toRadians(lon);
+        this.dist = distance;
+        GetPlaces getPlaces = new GetPlaces(retActivity);
+
+       getPlaces.execute();
+    }
+
+    private class GetPlaces extends AsyncTask<String, String, String>{
+
+        HttpURLConnection connection = null;
+        BufferedReader reader = null;
+        String resultJson="";
+        private NearbyActivity retActivity;
+
+
+        public GetPlaces(NearbyActivity retActivity){
+            this.retActivity = retActivity;
         }
-        return  near;
+
+        //Поменять код, например показав окошко "загрузка"
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+        }
+
+        @Override
+        protected String doInBackground(String... params) {
+            try {
+                String parameters = new StringBuilder().append("?").append(TAG_LAT).append("=").append(lat).append("&")
+                        .append(TAG_LON).append("=").append(lon).append("&")
+                        .append(TAG_DIST).append("=").append(dist).toString();
+                String ustr = urlString+parameters;
+                URL url = new URL(ustr);
+                connection = (HttpURLConnection) url.openConnection();
+                connection.setRequestMethod("GET");
+                connection.connect();
+
+                InputStream inputStream = connection.getInputStream();
+                StringBuffer buffer = new StringBuffer();
+
+                reader=new BufferedReader(new InputStreamReader(inputStream));
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    buffer.append(line);
+                }
+
+                resultJson = buffer.toString();
+
+
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+
+            return resultJson;
+        }
+
+        @Override
+        protected void onPostExecute(String s) {
+            super.onPostExecute(s);
+            JSONObject result = null;
+            try {
+                result = new JSONObject(resultJson);
+                jplaces = result.getJSONArray(TAG_PLACES);
+
+                for(int i = 0; i<jplaces.length(); i++){
+                    JSONObject place = jplaces.getJSONObject(i);
+                    List<String> objectList;
+                    String[] objects = place.getString(TAG_OLIST).split(";");
+                    objectList = new ArrayList<>();
+                    for(String o : objects){
+                        objectList.add(o);
+                    }
+                    List<String> catList = new ArrayList<>();
+                    String[] cats = place.getString(TAG_CLIST).split(";");
+                    objectList = new ArrayList<>();
+                    for(String o : cats){
+                        catList.add(o);
+                    }
+                    Place p = new Place(
+                        place.getDouble(TAG_LAT),
+                            place.getDouble(TAG_LON),
+                            place.getString(TAG_NAME),
+                            place.getString(TAG_SHORT),
+                            place.getString(TAG_LONG),
+                            objectList,
+                            catList,
+                            place.getString(TAG_ADDRESS)
+                    );
+
+                    places.add(p);
+                    retActivity.showPlaces(places);
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
     }
 }

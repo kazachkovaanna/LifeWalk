@@ -10,6 +10,9 @@ public class Settings {
     private static Settings settings =new Settings();
     public static Integer DISTANCE = 1000;
     public static Boolean NOTIFICATION = true;
+    public static Boolean NEARMEMODE = true;
+
+    public Boolean nearMeMode=true;
 
     SharedPreferences preferences;
     protected Integer distance;
@@ -103,6 +106,15 @@ public class Settings {
     public void load() {
         distance = preferences.getInt("distance", DISTANCE);
         notification = preferences.getBoolean("notification", NOTIFICATION);
+        nearMeMode = preferences.getBoolean("nearMeMode", NEARMEMODE);
+    }
+
+    public Boolean getNearMeMode() {
+        return nearMeMode;
+    }
+
+    public void setNearMeMode(Boolean nearMeMode) {
+        this.nearMeMode = nearMeMode;
     }
 
     /**
@@ -112,6 +124,7 @@ public class Settings {
         SharedPreferences.Editor editor = preferences.edit();
         editor.putInt("distance", distance);
         editor.putBoolean("notification", notification);
+        editor.putBoolean("nearMeMode", nearMeMode);
         editor.apply();
     }
 

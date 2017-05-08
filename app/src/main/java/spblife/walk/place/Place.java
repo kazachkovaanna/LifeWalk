@@ -13,8 +13,9 @@ public class Place {
     private String longDescription;
     private List<String> objectList;
     private List<String> categoriesList;
+    private String address;
 
-    public Place(double lat, double lon, String name, String shortDescription, String longDescription, List<String> objectList, List<String> categoriesList) {
+    public Place(double lat, double lon, String name, String shortDescription, String longDescription, List<String> objectList, List<String> categoriesList, String address) {
         this.lat = lat;
         this.lon = lon;
         this.name = name;
@@ -22,6 +23,7 @@ public class Place {
         this.longDescription = longDescription;
         this.objectList = objectList;
         this.categoriesList = categoriesList;
+        this.address = address;
     }
 
     public Place() {
@@ -81,5 +83,9 @@ public class Place {
 
     public void setCategoriesList(List<String> categoriesList) {
         this.categoriesList = categoriesList;
+    }
+
+    public String getAddress() {
+        return address;
     }
 }

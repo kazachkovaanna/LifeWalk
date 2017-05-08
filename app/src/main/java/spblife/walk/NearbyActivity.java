@@ -16,12 +16,14 @@ import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.MenuItem;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import ru.yandex.yandexmapkit.MapController;
 import ru.yandex.yandexmapkit.MapView;
@@ -46,6 +48,8 @@ public class NearbyActivity extends AppCompatActivity
     private static PlaceFabric placeFabric = new PlaceFabric();
     boolean nearMeMode;
     private static final int PERMISSIONS_CODE = 109;
+    private List<Overlay> overlays;
+    private Overlay placeOverlay;
 
     LinearLayout mapLayout;
 
@@ -68,7 +72,7 @@ public class NearbyActivity extends AppCompatActivity
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
 
-        mapLayout = (LinearLayout) findViewById(R.id.mapLinearView);
+       // mapLayout = (LinearLayout) findViewById(R.id.mapLinearView);
 
         //Настройки
         settings = Settings.getSettings(getSharedPreferences("spblife.walk_preferences", Context.MODE_PRIVATE));
@@ -79,11 +83,12 @@ public class NearbyActivity extends AppCompatActivity
         overlayManager = mapController.getOverlayManager();
         balloonListener = new BalloonListener();
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
+        placeOverlay = new Overlay(mapController);
 
-        nearMeMode = false;
+        overlays = new ArrayList<>();
         nearPoint = null;
         //ну и поработать с ней
-        initMap();
+        //initMap();
 
 
     }
@@ -118,9 +123,14 @@ public class NearbyActivity extends AppCompatActivity
         int id = item.getItemId();
 
         if (id == R.id.nearby) {
+            Settings.getSettings().setNearMeMode(true);
+            Settings.getSettings().save();
+            initMap();
 
         } else if (id == R.id.what) {
-
+            Settings.getSettings().setNearMeMode(false);
+            Settings.getSettings().save();
+            initMap();
         }
         else if (id== R.id.distance){
             intent=new Intent(this, SettingsActivity.class);
@@ -134,8 +144,9 @@ public class NearbyActivity extends AppCompatActivity
     }
 
     @Override
-    protected void onResume(){
+    protected void onResume() {
         super.onResume();
+
         initMap();
     }
 
@@ -144,7 +155,7 @@ public class NearbyActivity extends AppCompatActivity
         @Override
         public void onLocationChanged(Location location) {
             nearPoint = new GeoPoint(location.getLatitude(), location.getLongitude());
-            go();
+            initMap();
         }
 
         @Override
@@ -165,13 +176,13 @@ public class NearbyActivity extends AppCompatActivity
     };
 
     private void initMap(){
+        nearMeMode = Settings.getSettings().getNearMeMode();
+        TextView textView = (TextView) findViewById(R.id.text_places);
+        textView.setText("");
+        mapView.showFindMeButton(true);
         //Создать  слой для работы с объектами
-        Resources res = getResources();
-        Overlay overlay = new Overlay(mapController);
-        List<Overlay> overlays = overlayManager.getOverlays();
-        for(Overlay o : overlays){
-            o.clearOverlayItems();
-        }
+       placeOverlay.clearOverlayItems();
+        int dist =  Settings.getSettings().getDistance();
         if(nearMeMode){
             checkPermission();
             //mapView.showBuiltInScreenButtons(true);
@@ -183,79 +194,95 @@ public class NearbyActivity extends AppCompatActivity
                     LocationManager.NETWORK_PROVIDER, 0, 10,
                     locationListener);
             Location lastLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-            if(lastLocation != null) nearPoint = new GeoPoint(lastLocation.getLatitude(), lastLocation.getLongitude());
-            overlayManager.getMyLocation().findMe();
+            if(nearPoint != null) {
+                if (lastLocation != null)
+                    nearPoint = new GeoPoint(lastLocation.getLatitude(), lastLocation.getLongitude());
+                overlayManager.getMyLocation().findMe();
+                overlayManager.getMyLocation().setVisible(true);
+                mapView.showFindMeButton(true);
+                placeFabric.getNearPlaces(nearPoint.getLat(), nearPoint.getLon(), dist, this);
+            }
         }
         else{
             overlayManager.getMyLocation().setEnabled(false);
-            nearPoint = new GeoPoint(59.923576, 30.342745);
-            go();
+            nearPoint = new GeoPoint(59.92057786922, 30.336764);
+            placeFabric.getNearPlaces(nearPoint.getLat(), nearPoint.getLon(),dist, this);
         }
+
+
     }
 
 
-    private  void go(){
+    public synchronized void showPlaces(List<Place> places){
+        placeOverlay.clearOverlayItems();
         //Создать  слой для работы с объектами
         Resources res = getResources();
-        Overlay overlay = new Overlay(mapController);
-
-
-        int dist =  Settings.getSettings().getDistance();
-
-        List<Place> places = placeFabric.getNearPlaces(nearPoint.getLat(), nearPoint.getLon(),dist);
+        //placeOverlay = new Overlay(mapController);
+        TextView textView = (TextView) findViewById(R.id.text_places);
+        textView.setText("");
+//        Log.d("text view",textView.getText().toString());
 
         for(Place p : places){
-            OverlayItem overlayItem = new OverlayItem(new GeoPoint(p.getLat(), p.getLon()),res.getDrawable(R.drawable.ic_place, getTheme()));
+            OverlayItem overlayItem = new OverlayItem(new GeoPoint(Math.toDegrees(p.getLat()), Math.toDegrees(p.getLon())),res.getDrawable(R.drawable.ic_place, getTheme()));
             BalloonItem balloonItem = new BalloonItem(this,overlayItem.getGeoPoint());
             balloonItem.setOnBalloonListener(balloonListener);
-            overlay.addOverlayItem(overlayItem);
-            overlayManager.addOverlay(overlay);
+            placeOverlay.addOverlayItem(overlayItem);
+            overlayManager.addOverlay(placeOverlay);
+            textView.append(p.getName());
+            textView.append("\n");
+            textView.append(p.getShortDescription());
+            textView.append("\n");
+            textView.append(p.getLongDescription());
         }
 
         if(!nearMeMode){
             OverlayItem overlayItem = new OverlayItem(nearPoint,res.getDrawable(R.drawable.ic_where, getTheme()));
             BalloonItem balloonItem = new BalloonItem(this,overlayItem.getGeoPoint());
             balloonItem.setOnBalloonListener(balloonListener);
-            overlay.addOverlayItem(overlayItem);
-            overlayManager.addOverlay(overlay);
+            placeOverlay.addOverlayItem(overlayItem);
+            overlayManager.addOverlay(placeOverlay);
         }
 
-        mapController.setZoomCurrent(17);
-        mapController.setPositionAnimationTo(nearPoint);
+        //mapController.setZoomCurrent(17);
+
         //Отобразить места в списке
-        for(Place p: places){
-            TextView textView = new TextView(this);
-            textView.setText(p.getName());
-            mapLayout.addView(textView);
-            textView = new TextView(this);
-            textView.setText(p.getShortDescription());
-            mapLayout.addView(textView);
-            textView = new TextView(this);
-            textView.setText(p.getLongDescription());
-            mapLayout.addView(textView);
-        }
+
         //Масштабирование
 
-        /*List<GeoPoint> gplist = new ArrayList<>();
+        List<GeoPoint> gplist = new ArrayList<>();
         if(nearPoint!= null) gplist.add(nearPoint);
         for(Place p : places){
-            gplist.add(new GeoPoint(p.getLat(), p.getLon()));
+            gplist.add(new GeoPoint(Math.toDegrees(p.getLat()), Math.toDegrees(p.getLon())));
         }
-        double maxLat, minLat, maxLon, minLon;
+        double maxLat, minLat, maxLon, minLon, avgLat, avgLon;
         maxLat = maxLon = Double.MIN_VALUE;
         minLat = minLon = Double.MAX_VALUE;
+        avgLat = avgLon = 0;
         for (GeoPoint gp : gplist){
             double lat = gp.getLat();
             double lon = gp.getLon();
+            avgLat+=gp.getLat();
+            avgLon+=gp.getLon();
 
             maxLat = Math.max(lat, maxLat);
             minLat = Math.min(lat, minLat);
             maxLon = Math.max(lon, maxLon);
             minLon = Math.min(lon, minLon);
         }
+        if(gplist.size() > 0) {
+            avgLat /= gplist.size();
+            avgLon /= gplist.size();
+        }
+        else{
+            avgLat = nearPoint.getLat();
+            avgLon = nearPoint.getLon();
+        }
         mapController.setZoomToSpan(maxLat - minLat, maxLon - minLon);
-        mapController.setPositionAnimationTo(new GeoPoint((maxLat + minLat)/2, (maxLon + minLon)/2));*/
+        //mapController.setZoomCurrent(16);
+        //mapController.setZoomToSpan();
+        mapController.setPositionAnimationTo(new GeoPoint(avgLat, avgLon));
 
+//        mapController.setPositionAnimationTo(nearPoint);
 
     }
 
